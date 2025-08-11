@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models/reading_history.dart';
 import 'models/user_settings.dart';
+import '../../features/extensions/data/isar_extension_source.dart';
 
 class IsarService {
   static IsarService? _instance;
@@ -22,6 +23,7 @@ class IsarService {
       [
         ReadingHistorySchema,
         UserSettingsSchema,
+        IsarExtensionSourceSchema,
       ],
       directory: dir.path,
       name: 'gmanga_db',

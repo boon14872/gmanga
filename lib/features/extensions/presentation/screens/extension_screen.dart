@@ -52,6 +52,11 @@ class ExtensionScreen extends ConsumerWidget {
         title: const Text('Extensions'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.file_upload),
+            tooltip: 'Load from File',
+            onPressed: () => _loadExtensionFromFile(context, ref),
+          ),
+          IconButton(
             icon: const Icon(Icons.add_link),
             tooltip: 'Import from URL',
             onPressed: () => _showImportDialog(context, ref),
@@ -83,5 +88,42 @@ class ExtensionScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _loadExtensionFromFile(BuildContext context, WidgetRef ref) async {
+    try {
+      final extension = await ref.read(extensionListProvider.notifier).loadExtensionFromFile();
+      
+      if (extension != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully loaded extension: ${extension.name}'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'VIEW',
+              onPressed: () {
+                // Extension is now in the list, user can see it
+              },
+            ),
+          ),
+        );
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Operation cancelled or failed to load extension'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading extension: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
