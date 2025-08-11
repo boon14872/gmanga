@@ -21,7 +21,7 @@ final availableSourcesProvider = Provider<List<MangaSource>>.internal(
 );
 
 typedef AvailableSourcesRef = ProviderRef<List<MangaSource>>;
-String _$selectedSourceHash() => r'c411e64b4ce611fcf40b6e77b97eaa0482454c53';
+String _$selectedSourceHash() => r'a7080b13af261dcd7ab70a4b86bcf6da1ba06700';
 
 /// See also [SelectedSource].
 @ProviderFor(SelectedSource)

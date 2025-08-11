@@ -9,6 +9,20 @@ allprojects {
     }
 }
 
+// Force all projects to use compatible Java/Kotlin versions
+allprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        sourceCompatibility = JavaVersion.VERSION_11.toString()
+        targetCompatibility = JavaVersion.VERSION_11.toString()
+    }
+    
+    tasks.withType<KotlinCompile>().configureEach {
+        kotlinOptions {
+            jvmTarget = "11"
+        }
+    }
+}
+
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
 
@@ -31,12 +45,13 @@ subprojects {
             }
 
             compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
+                sourceCompatibility = JavaVersion.VERSION_11
+                targetCompatibility = JavaVersion.VERSION_11
             }
+            
             tasks.withType<KotlinCompile>().configureEach {
                 kotlinOptions {
-                    jvmTarget = JavaVersion.VERSION_17.toString()
+                    jvmTarget = "11"
                     freeCompilerArgs = freeCompilerArgs + listOf("-Xlint:-options")
                 }
             }

@@ -21,6 +21,20 @@ final mangaRepositoryProvider = Provider<MangaRepository>.internal(
 );
 
 typedef MangaRepositoryRef = ProviderRef<MangaRepository>;
+String _$cacheServiceHash() => r'84442d4ee25bf8cce884bb123b7675291b9c2248';
+
+/// See also [cacheService].
+@ProviderFor(cacheService)
+final cacheServiceProvider = Provider<CacheService>.internal(
+  cacheService,
+  name: r'cacheServiceProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$cacheServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef CacheServiceRef = ProviderRef<CacheService>;
 String _$mangaDetailsHash() => r'85452f03b9658ab3bd088ce5d4cd18380a4e074d';
 
 /// Copied from Dart SDK
@@ -299,7 +313,7 @@ class _ChapterListProviderElement
   String get mangaId => (origin as ChapterListProvider).mangaId;
 }
 
-String _$browseSourceHash() => r'2cfeb266650caa7fe19191d2b65da04ae920fba7';
+String _$browseSourceHash() => r'ee46461f8e885315b7cba8e7a62922a56a44ef46';
 
 /// See also [BrowseSource].
 @ProviderFor(BrowseSource)
@@ -314,5 +328,35 @@ final browseSourceProvider =
 );
 
 typedef _$BrowseSource = AutoDisposeAsyncNotifier<List<Manga>>;
+String _$latestSourceHash() => r'f22b9e1a16a03687979141940026d24483f7d3e3';
+
+/// See also [LatestSource].
+@ProviderFor(LatestSource)
+final latestSourceProvider =
+    AutoDisposeAsyncNotifierProvider<LatestSource, List<Manga>>.internal(
+  LatestSource.new,
+  name: r'latestSourceProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$latestSourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$LatestSource = AutoDisposeAsyncNotifier<List<Manga>>;
+String _$searchHash() => r'003f63408cd729e30c21132277e5cf45ea59f65f';
+
+/// See also [Search].
+@ProviderFor(Search)
+final searchProvider =
+    AutoDisposeAsyncNotifierProvider<Search, List<Manga>>.internal(
+  Search.new,
+  name: r'searchProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$searchHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$Search = AutoDisposeAsyncNotifier<List<Manga>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

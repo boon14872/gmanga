@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref;
 import 'package:gmanga/features/browse/domain/manga_source.dart';
 import 'package:gmanga/features/extensions/presentation/providers/extension_providers.dart';
+import 'package:gmanga/core/providers/settings_providers.dart';
 
 part 'source_providers.g.dart';
 
@@ -73,20 +74,50 @@ List<MangaSource> availableSources(Ref ref) {
   );
 }
 
-// Currently selected source
+// Currently selected source with persistence
 @riverpod
 class SelectedSource extends _$SelectedSource {
   @override
   MangaSource build() {
     final sources = ref.watch(availableSourcesProvider);
-    return sources.isNotEmpty ? sources.first : const MangaSource(
-      id: 'nekopost',
-      name: 'NekoPost',
-      assetPath: 'assets/extensions/nekopost_source.js',
+    final persistedSourceAsync = ref.watch(persistedSelectedSourceProvider);
+    
+    // Use persisted source if available, otherwise default to first source
+    return persistedSourceAsync.when(
+      data: (persistedSourceId) {
+        if (persistedSourceId != null) {
+          final persistedSource = sources.firstWhere(
+            (source) => source.id == persistedSourceId,
+            orElse: () => sources.isNotEmpty ? sources.first : const MangaSource(
+              id: 'nekopost',
+              name: 'NekoPost',
+              assetPath: 'assets/extensions/nekopost_source.js',
+            ),
+          );
+          return persistedSource;
+        }
+        return sources.isNotEmpty ? sources.first : const MangaSource(
+          id: 'nekopost',
+          name: 'NekoPost',
+          assetPath: 'assets/extensions/nekopost_source.js',
+        );
+      },
+      loading: () => sources.isNotEmpty ? sources.first : const MangaSource(
+        id: 'nekopost',
+        name: 'NekoPost',
+        assetPath: 'assets/extensions/nekopost_source.js',
+      ),
+      error: (_, __) => sources.isNotEmpty ? sources.first : const MangaSource(
+        id: 'nekopost',
+        name: 'NekoPost',
+        assetPath: 'assets/extensions/nekopost_source.js',
+      ),
     );
   }
 
   void selectSource(MangaSource source) {
     state = source;
+    // Persist the selection
+    ref.read(persistedSelectedSourceProvider.notifier).saveSelectedSource(source.id);
   }
 }

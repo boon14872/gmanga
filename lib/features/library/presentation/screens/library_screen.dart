@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/library_providers.dart';
+import 'package:go_router/go_router.dart';
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
@@ -59,16 +60,7 @@ class LibraryScreen extends ConsumerWidget {
                 return Card(
                   child: InkWell(
                     onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/manga',
-                        arguments: {
-                          'id': manga.id,
-                          'title': manga.title,
-                          'thumbnailUrl': manga.thumbnailUrl,
-                          'author': manga.author,
-                        },
-                      );
+                      context.go('/manga/${manga.id}');
                     },
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

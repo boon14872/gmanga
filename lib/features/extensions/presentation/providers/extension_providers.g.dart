@@ -6,7 +6,7 @@ part of 'extension_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$extensionListHash() => r'88235af0f1488defee03a6ecaa2dcb1960678217';
+String _$extensionListHash() => r'0650c35657ff31bc19ad0009a6cdddf41cf1b420';
 
 /// See also [ExtensionList].
 @ProviderFor(ExtensionList)

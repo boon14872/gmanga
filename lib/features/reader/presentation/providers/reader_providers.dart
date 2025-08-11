@@ -22,6 +22,11 @@ class ReaderState {
   final Set<String> preloadedImages;
   final String? nextChapterId;
   final bool isLoadingNextChapter;
+  final bool isAtChapterEnd;
+  final String? chapterEndMessage;
+  final bool showNextChapterHint;
+  final String? currentChapterTitle;
+  final String? nextChapterTitle;
 
   ReaderState({
     this.pages = const [],
@@ -31,6 +36,11 @@ class ReaderState {
     this.preloadedImages = const {},
     this.nextChapterId,
     this.isLoadingNextChapter = false,
+    this.isAtChapterEnd = false,
+    this.chapterEndMessage,
+    this.showNextChapterHint = false,
+    this.currentChapterTitle,
+    this.nextChapterTitle,
   });
 
   ReaderState copyWith({
@@ -41,6 +51,11 @@ class ReaderState {
     Set<String>? preloadedImages,
     String? nextChapterId,
     bool? isLoadingNextChapter,
+    bool? isAtChapterEnd,
+    String? chapterEndMessage,
+    bool? showNextChapterHint,
+    String? currentChapterTitle,
+    String? nextChapterTitle,
   }) {
     return ReaderState(
       pages: pages ?? this.pages,
@@ -50,6 +65,11 @@ class ReaderState {
       preloadedImages: preloadedImages ?? this.preloadedImages,
       nextChapterId: nextChapterId ?? this.nextChapterId,
       isLoadingNextChapter: isLoadingNextChapter ?? this.isLoadingNextChapter,
+      isAtChapterEnd: isAtChapterEnd ?? this.isAtChapterEnd,
+      chapterEndMessage: chapterEndMessage ?? this.chapterEndMessage,
+      showNextChapterHint: showNextChapterHint ?? this.showNextChapterHint,
+      currentChapterTitle: currentChapterTitle ?? this.currentChapterTitle,
+      nextChapterTitle: nextChapterTitle ?? this.nextChapterTitle,
     );
   }
 }
@@ -152,10 +172,33 @@ class ReaderNotifier extends StateNotifier<ReaderState> {
       final updatedPages = [...state.pages, ...nextBatch];
       final hasMore = updatedPages.length < _allPages.length;
       
+      // Check if we're at chapter end
+      final isAtChapterEnd = !hasMore && state.nextChapterId != null;
+      String? chapterEndMessage;
+      bool showNextChapterHint = false;
+      
+      if (isAtChapterEnd) {
+        if (state.nextChapterId != null) {
+          chapterEndMessage = "End of chapter reached";
+          showNextChapterHint = true;
+          // Auto-load next chapter after a delay
+          Future.delayed(const Duration(seconds: 2), () {
+            if (state.nextChapterId != null) {
+              loadNextChapter();
+            }
+          });
+        } else {
+          chapterEndMessage = "End of manga reached";
+        }
+      }
+      
       state = state.copyWith(
         pages: updatedPages,
         isLoading: false,
         hasMore: hasMore,
+        isAtChapterEnd: isAtChapterEnd,
+        chapterEndMessage: chapterEndMessage,
+        showNextChapterHint: showNextChapterHint,
       );
       
       // Preload next batch
@@ -173,7 +216,10 @@ class ReaderNotifier extends StateNotifier<ReaderState> {
   Future<void> loadNextChapter() async {
     if (state.nextChapterId == null || state.isLoadingNextChapter) return;
     
-    state = state.copyWith(isLoadingNextChapter: true);
+    state = state.copyWith(
+      isLoadingNextChapter: true,
+      chapterEndMessage: "Loading next chapter...",
+    );
     
     try {
       print('Loading next chapter: ${state.nextChapterId}');
@@ -195,6 +241,9 @@ class ReaderNotifier extends StateNotifier<ReaderState> {
           isLoadingNextChapter: false,
           nextChapterId: nextNextChapterId,
           hasMore: nextNextChapterId != null,
+          isAtChapterEnd: false,
+          chapterEndMessage: null,
+          showNextChapterHint: false,
         );
         
         // Preload first few pages of next chapter
@@ -204,6 +253,7 @@ class ReaderNotifier extends StateNotifier<ReaderState> {
         state = state.copyWith(
           isLoadingNextChapter: false,
           hasMore: false,
+          chapterEndMessage: "No more chapters available",
         );
       }
     } catch (e) {
@@ -211,8 +261,30 @@ class ReaderNotifier extends StateNotifier<ReaderState> {
       state = state.copyWith(
         isLoadingNextChapter: false,
         error: 'Failed to load next chapter: $e',
+        chapterEndMessage: "Failed to load next chapter",
       );
     }
+  }
+
+  void checkChapterEnd(int currentPageIndex) {
+    final totalPages = state.pages.length;
+    final isNearEnd = currentPageIndex >= totalPages - 2;
+    
+    if (isNearEnd && !state.hasMore && state.nextChapterId != null && !state.isLoadingNextChapter) {
+      state = state.copyWith(
+        isAtChapterEnd: true,
+        chapterEndMessage: "End of chapter reached",
+        showNextChapterHint: true,
+      );
+    }
+  }
+
+  void clearChapterEndMessage() {
+    state = state.copyWith(
+      isAtChapterEnd: false,
+      chapterEndMessage: null,
+      showNextChapterHint: false,
+    );
   }
 
   void resetReader() {

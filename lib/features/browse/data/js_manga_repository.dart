@@ -119,6 +119,122 @@ class JsMangaRepository implements MangaRepository {
       return [];
     }
   }
+
+  @override
+  Future<List<Manga>> getLatestManga(int page, {MangaSource? source}) async {
+    final assetPath = source?.assetPath;
+    
+    // First, get the URL from JavaScript
+    final urlJson = await _evaluateJavascript("source.getLatestUrl ? source.getLatestUrl($page) : source.getPopularUrl($page)", sourceAssetPath: assetPath);
+    
+    if (urlJson.trim().isEmpty) {
+      print('Extension returned empty URL for getLatestUrl');
+      return [];
+    }
+    
+    String url;
+    try {
+      final urlData = jsonDecode(urlJson);
+      url = urlData['url'] ?? '';
+      if (url.isEmpty) {
+        print('Extension returned invalid URL structure');
+        return [];
+      }
+    } catch (e) {
+      print('Failed to parse URL JSON from extension: $e');
+      return [];
+    }
+    
+    // Fetch the HTTP data in Dart
+    print('Fetching Latest URL from Dart: $url');
+    final httpResponse = await _fetchHttpData(url, sourceAssetPath: assetPath);
+    
+    if (httpResponse.isEmpty) {
+      print('Failed to fetch HTTP data for URL: $url');
+      return [];
+    }
+    
+    // Pass the HTTP response to JavaScript for parsing
+    final resultJson = await _evaluateJavascript(
+      "source.parseLatest ? source.parseLatest(${jsonEncode(httpResponse)}, $page) : source.parsePopular(${jsonEncode(httpResponse)}, $page)", 
+      sourceAssetPath: assetPath
+    );
+    
+    if (resultJson.trim().isEmpty) {
+      print('Extension returned empty result for parseLatest');
+      return [];
+    }
+    
+    try {
+      final List<dynamic> decoded = jsonDecode(resultJson) as List<dynamic>;
+      return decoded.map((item) => Manga(
+        id: item['id'] ?? '',
+        title: item['title'] ?? '',
+        thumbnailUrl: item['thumbnailUrl'] ?? '',
+      )).toList();
+    } catch (e) {
+      print('JSON decode error in getLatestManga. Raw: ${resultJson.substring(0, resultJson.length > 200 ? 200 : resultJson.length)}');
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Manga>> searchManga(String query, {MangaSource? source, int page = 1}) async {
+    final assetPath = source?.assetPath;
+    
+    // First, get the URL from JavaScript
+    final urlJson = await _evaluateJavascript("source.getSearchUrl ? source.getSearchUrl(${jsonEncode(query)}, $page) : JSON.stringify({url: ''})", sourceAssetPath: assetPath);
+    
+    if (urlJson.trim().isEmpty) {
+      print('Extension returned empty URL for getSearchUrl');
+      return [];
+    }
+    
+    String url;
+    try {
+      final urlData = jsonDecode(urlJson);
+      url = urlData['url'] ?? '';
+      if (url.isEmpty) {
+        print('Extension returned invalid URL structure for search');
+        return [];
+      }
+    } catch (e) {
+      print('Failed to parse search URL JSON from extension: $e');
+      return [];
+    }
+    
+    // Fetch the HTTP data in Dart
+    print('Fetching Search URL from Dart: $url');
+    final httpResponse = await _fetchHttpData(url, sourceAssetPath: assetPath);
+    
+    if (httpResponse.isEmpty) {
+      print('Failed to fetch HTTP data for search URL: $url');
+      return [];
+    }
+    
+    // Pass the HTTP response to JavaScript for parsing
+    final resultJson = await _evaluateJavascript(
+      "source.parseSearch ? source.parseSearch(${jsonEncode(httpResponse)}, ${jsonEncode(query)}, $page) : source.parsePopular(${jsonEncode(httpResponse)}, $page)", 
+      sourceAssetPath: assetPath
+    );
+    
+    if (resultJson.trim().isEmpty) {
+      print('Extension returned empty result for parseSearch');
+      return [];
+    }
+    
+    try {
+      final List<dynamic> decoded = jsonDecode(resultJson) as List<dynamic>;
+      return decoded.map((item) => Manga(
+        id: item['id'] ?? '',
+        title: item['title'] ?? '',
+        thumbnailUrl: item['thumbnailUrl'] ?? '',
+      )).toList();
+    } catch (e) {
+      print('JSON decode error in searchManga. Raw: ${resultJson.substring(0, resultJson.length > 200 ? 200 : resultJson.length)}');
+      return [];
+    }
+  }
   
   Future<String> _fetchHttpData(String url, {String? sourceAssetPath}) async {
     try {
