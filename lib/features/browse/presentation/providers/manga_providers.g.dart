@@ -21,20 +21,6 @@ final mangaRepositoryProvider = Provider<MangaRepository>.internal(
 );
 
 typedef MangaRepositoryRef = ProviderRef<MangaRepository>;
-String _$cacheServiceHash() => r'84442d4ee25bf8cce884bb123b7675291b9c2248';
-
-/// See also [cacheService].
-@ProviderFor(cacheService)
-final cacheServiceProvider = Provider<CacheService>.internal(
-  cacheService,
-  name: r'cacheServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$cacheServiceHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-typedef CacheServiceRef = ProviderRef<CacheService>;
 String _$mangaDetailsHash() => r'85452f03b9658ab3bd088ce5d4cd18380a4e074d';
 
 /// Copied from Dart SDK
@@ -313,7 +299,7 @@ class _ChapterListProviderElement
   String get mangaId => (origin as ChapterListProvider).mangaId;
 }
 
-String _$browseSourceHash() => r'ee46461f8e885315b7cba8e7a62922a56a44ef46';
+String _$browseSourceHash() => r'30736e732d904ce983e9f15ca60963b92051bf00';
 
 /// See also [BrowseSource].
 @ProviderFor(BrowseSource)
@@ -328,7 +314,7 @@ final browseSourceProvider =
 );
 
 typedef _$BrowseSource = AutoDisposeAsyncNotifier<List<Manga>>;
-String _$latestSourceHash() => r'f22b9e1a16a03687979141940026d24483f7d3e3';
+String _$latestSourceHash() => r'45507e412225fab463f4d0b0c84e369a90c87f10';
 
 /// See also [LatestSource].
 @ProviderFor(LatestSource)
@@ -343,7 +329,7 @@ final latestSourceProvider =
 );
 
 typedef _$LatestSource = AutoDisposeAsyncNotifier<List<Manga>>;
-String _$searchHash() => r'003f63408cd729e30c21132277e5cf45ea59f65f';
+String _$searchHash() => r'c5d81ed8450e6e7571d5377c2d5ad4d6c17adf42';
 
 /// See also [Search].
 @ProviderFor(Search)

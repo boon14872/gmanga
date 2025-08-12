@@ -1,9 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Ref, StateProvider;
-// ลบ import ของ MockMangaRepository ออก
-// import 'package:gmanga/features/browse/data/mock_manga_repository.dart';
 
-// เพิ่ม import ของ JsMangaRepository เข้ามาแทน
 import 'package:gmanga/features/browse/data/js_manga_repository.dart';
 import 'package:gmanga/features/browse/domain/manga.dart';
 import 'package:gmanga/features/browse/domain/manga_repository.dart';
@@ -14,13 +11,7 @@ part 'manga_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 MangaRepository mangaRepository(Ref ref) {
-  // เปลี่ยนจาก Mock เป็น JsMangaRepository
   return JsMangaRepository();
-}
-
-@Riverpod(keepAlive: true)
-CacheService cacheService(Ref ref) {
-  return CacheService();
 }
 
 // ... โค้ดส่วนที่เหลือของ Provider เหมือนเดิม ...
@@ -38,7 +29,7 @@ class BrowseSource extends _$BrowseSource {
     
     final repository = ref.watch(mangaRepositoryProvider);
     final selectedSource = ref.watch(selectedSourceProvider);
-    final cache = ref.watch(cacheServiceProvider);
+    final cache = CacheService.instance;
     
     // Try to get from cache first
     final cachedManga = await cache.getCachedMangaList(
@@ -47,17 +38,9 @@ class BrowseSource extends _$BrowseSource {
       page: _currentPage,
     );
     
-    if (cachedManga.isNotEmpty) {
-      // Convert cached manga back to domain models
-      _allManga = cachedManga.map((cached) => Manga(
-        id: cached.mangaId,
-        title: cached.title,
-        thumbnailUrl: cached.thumbnailUrl,
-        author: cached.author,
-        description: cached.description,
-        genres: cached.genres,
-        status: cached.status,
-      )).toList();
+    if (cachedManga != null && cachedManga.isNotEmpty) {
+      // Cache service already returns Manga objects
+      _allManga = cachedManga;
       
       // Load fresh data in background
       _loadFreshData();
@@ -69,7 +52,7 @@ class BrowseSource extends _$BrowseSource {
     _allManga = firstPageManga;
     
     // Cache the results
-    await cache.cacheMangaList(firstPageManga, selectedSource.id, 'popular', page: _currentPage);
+    await cache.cacheMangaList(selectedSource.id, 'popular', firstPageManga, page: _currentPage);
     
     return _allManga;
   }
@@ -78,12 +61,12 @@ class BrowseSource extends _$BrowseSource {
     try {
       final repository = ref.read(mangaRepositoryProvider);
       final selectedSource = ref.read(selectedSourceProvider);
-      final cache = ref.read(cacheServiceProvider);
+      final cache = CacheService.instance;
       
       final freshManga = await repository.getPopularManga(_currentPage, source: selectedSource);
       
       // Update cache
-      await cache.cacheMangaList(freshManga, selectedSource.id, 'popular', page: _currentPage);
+      await cache.cacheMangaList(selectedSource.id, 'popular', freshManga, page: _currentPage);
       
       // Update state if data has changed
       _allManga = freshManga;
@@ -149,7 +132,7 @@ class LatestSource extends _$LatestSource {
     
     final repository = ref.watch(mangaRepositoryProvider);
     final selectedSource = ref.watch(selectedSourceProvider);
-    final cache = ref.watch(cacheServiceProvider);
+    final cache = CacheService.instance;
     
     // Try to get from cache first
     final cachedManga = await cache.getCachedMangaList(
@@ -158,17 +141,9 @@ class LatestSource extends _$LatestSource {
       page: _currentPage,
     );
     
-    if (cachedManga.isNotEmpty) {
-      // Convert cached manga back to domain models
-      _allManga = cachedManga.map((cached) => Manga(
-        id: cached.mangaId,
-        title: cached.title,
-        thumbnailUrl: cached.thumbnailUrl,
-        author: cached.author,
-        description: cached.description,
-        genres: cached.genres,
-        status: cached.status,
-      )).toList();
+    if (cachedManga != null && cachedManga.isNotEmpty) {
+      // Cache service already returns Manga objects
+      _allManga = cachedManga;
       
       // Load fresh data in background
       _loadFreshData();
@@ -180,7 +155,7 @@ class LatestSource extends _$LatestSource {
     _allManga = firstPageManga;
     
     // Cache the results
-    await cache.cacheMangaList(firstPageManga, selectedSource.id, 'latest', page: _currentPage);
+    await cache.cacheMangaList(selectedSource.id, 'latest', firstPageManga, page: _currentPage);
     
     return _allManga;
   }
@@ -189,12 +164,12 @@ class LatestSource extends _$LatestSource {
     try {
       final repository = ref.read(mangaRepositoryProvider);
       final selectedSource = ref.read(selectedSourceProvider);
-      final cache = ref.read(cacheServiceProvider);
+      final cache = CacheService.instance;
       
       final freshManga = await repository.getLatestManga(_currentPage, source: selectedSource);
       
       // Update cache
-      await cache.cacheMangaList(freshManga, selectedSource.id, 'latest', page: _currentPage);
+      await cache.cacheMangaList(selectedSource.id, 'latest', freshManga, page: _currentPage);
       
       // Update state if data has changed
       _allManga = freshManga;
@@ -216,7 +191,7 @@ class LatestSource extends _$LatestSource {
     try {
       final repository = ref.read(mangaRepositoryProvider);
       final selectedSource = ref.read(selectedSourceProvider);
-      final cache = ref.read(cacheServiceProvider);
+      final cache = CacheService.instance;
       
       final newManga = await repository.getLatestManga(_currentPage, source: selectedSource);
       
@@ -225,7 +200,7 @@ class LatestSource extends _$LatestSource {
       } else {
         _allManga = [..._allManga, ...newManga];
         // Cache the new page
-        await cache.cacheMangaList(newManga, selectedSource.id, 'latest', page: _currentPage);
+        await cache.cacheMangaList(selectedSource.id, 'latest', newManga, page: _currentPage);
         // Trigger rebuild with new data
         state = AsyncValue.data(_allManga);
       }
@@ -273,7 +248,7 @@ class Search extends _$Search {
     try {
       final repository = ref.read(mangaRepositoryProvider);
       final selectedSource = ref.read(selectedSourceProvider);
-      final cache = ref.read(cacheServiceProvider);
+      final cache = CacheService.instance;
       
       // Try cache first
       final cachedResults = await cache.getCachedMangaList(
@@ -282,18 +257,9 @@ class Search extends _$Search {
         searchQuery: query,
       );
       
-      if (cachedResults.isNotEmpty) {
-        final mangaList = cachedResults.map((cached) => Manga(
-          id: cached.mangaId,
-          title: cached.title,
-          thumbnailUrl: cached.thumbnailUrl,
-          author: cached.author,
-          description: cached.description,
-          genres: cached.genres,
-          status: cached.status,
-        )).toList();
-        
-        state = AsyncValue.data(mangaList);
+      if (cachedResults != null && cachedResults.isNotEmpty) {
+        // Cache service already returns Manga objects
+        state = AsyncValue.data(cachedResults);
         return;
       }
       
@@ -301,7 +267,7 @@ class Search extends _$Search {
       final results = await repository.searchManga(query, source: selectedSource);
       
       // Cache results
-      await cache.cacheMangaList(results, selectedSource.id, 'search', searchQuery: query);
+      await cache.cacheMangaList(selectedSource.id, 'search', results, searchQuery: query);
       
       state = AsyncValue.data(results);
     } catch (error, stackTrace) {

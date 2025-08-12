@@ -1,14 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gmanga/core/services/cache_service.dart';
 import 'package:gmanga/features/browse/presentation/providers/manga_providers.dart';
 import 'package:gmanga/features/browse/presentation/providers/source_providers.dart';
 import 'package:gmanga/features/browse/presentation/widgets/manga_grid_item.dart';
 import 'package:gmanga/features/browse/presentation/widgets/manga_grid_loading_skeleton.dart';
-import 'package:gmanga/features/library/presentation/providers/library_providers.dart';
 import 'package:gmanga/shared/widgets/error_display.dart';
-import 'package:gmanga/core/services/cache_service.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
@@ -22,7 +22,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
   bool _isSearching = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -30,7 +30,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     _searchController.addListener(_onSearchChanged);
     _autoLoadExtensions();
   }
-  
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -38,23 +38,23 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
     _searchDebounce?.cancel();
     super.dispose();
   }
-  
+
   void _autoLoadExtensions() {
     // Auto-refresh sources on startup to load any new extensions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(availableSourcesProvider);
       // Clear expired cache on startup
-      CacheService().clearExpiredCache();
+      CacheService.instance.clearExpiredCache();
     });
   }
-  
+
   void _onSearchChanged() {
     if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 500), () {
       _performSearch();
     });
   }
-  
+
   void _performSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
@@ -68,9 +68,9 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
       );
     }
   }
-  
+
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       // Load more manga when near bottom
       ref.read(browseSourceProvider.notifier).loadMore();
@@ -84,31 +84,31 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching 
-          ? TextField(
-              controller: _searchController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                hintText: 'Search manga...',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
-              ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _performSearch(),
-            )
-          : const Text('Popular Manga'),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Search manga...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                ),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => _performSearch(),
+              )
+            : const Text('Popular Manga'),
         centerTitle: false,
-        leading: _isSearching 
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchController.clear();
-                });
-              },
-            )
-          : null,
+        leading: _isSearching
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _isSearching = false;
+                    _searchController.clear();
+                  });
+                },
+              )
+            : null,
         actions: [
           if (!_isSearching) ...[
             IconButton(
@@ -143,10 +143,7 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
               ],
             ),
             itemBuilder: (context) => availableSources.map((source) {
-              return PopupMenuItem(
-                value: source,
-                child: Text(source.name),
-              );
+              return PopupMenuItem(value: source, child: Text(source.name));
             }).toList(),
             onSelected: (newSource) {
               ref.read(selectedSourceProvider.notifier).selectSource(newSource);
@@ -177,12 +174,13 @@ class _BrowseScreenState extends ConsumerState<BrowseScreen> {
                   child: GridView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(12.0),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.65,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.65,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
                     itemCount: mangaList.length,
                     itemBuilder: (context, index) {
                       final manga = mangaList[index];

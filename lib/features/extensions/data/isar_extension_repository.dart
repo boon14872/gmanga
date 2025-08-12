@@ -16,7 +16,7 @@ class IsarExtensionRepository implements ExtensionRepository {
   Future<void> _seedInitialData() async {
     // Always re-seed to include new extensions - you can change this logic later
     final existingCount = await _isar.isarExtensionSources.count();
-    if (existingCount < 6) { // Force reseed if we don't have all 6 extensions
+    if (existingCount < 5) { // Force reseed if we don't have all 5 extensions
       print("Database has $existingCount extensions. Re-seeding to include all extensions...");
       
       // Clear existing data first
@@ -25,12 +25,6 @@ class IsarExtensionRepository implements ExtensionRepository {
       });
       
       final initialExtensions = [
-        IsarExtensionSource()
-          ..sourceId = 'test'
-          ..name = 'Test API'
-          ..version = '1.0.0'
-          ..lang = 'EN'
-          ..isEnabled = true,
         IsarExtensionSource()
           ..sourceId = 'nekopost'
           ..name = 'NekoPost'

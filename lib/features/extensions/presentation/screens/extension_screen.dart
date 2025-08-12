@@ -45,7 +45,7 @@ class ExtensionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final extensionsState = ref.watch(extensionListProvider);
+    final extensionsAsync = ref.watch(extensionListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +63,7 @@ class ExtensionScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: extensionsState.when(
+      body: extensionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => ErrorDisplay(
           error: error.toString(),
@@ -90,10 +90,15 @@ class ExtensionScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _loadExtensionFromFile(BuildContext context, WidgetRef ref) async {
+  Future<void> _loadExtensionFromFile(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     try {
-      final extension = await ref.read(extensionListProvider.notifier).loadExtensionFromFile();
-      
+      final extension = await ref
+          .read(extensionListProvider.notifier)
+          .loadExtensionFromFile();
+
       if (extension != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

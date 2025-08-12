@@ -9,8 +9,6 @@ part 'source_providers.g.dart';
 // Helper function to map extension IDs to asset paths
 String _getAssetPathForExtension(String extensionId) {
   switch (extensionId) {
-    case 'test':
-      return 'assets/extensions/test_source.js';
     case 'nekopost':
       return 'assets/extensions/nekopost_source.js';
     case 'mangadx':

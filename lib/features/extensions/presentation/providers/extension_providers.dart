@@ -1,181 +1,151 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:gmanga/features/extensions/domain/extension_source.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:gmanga/features/extensions/domain/extension_source.dart';
+import 'package:gmanga/features/extensions/domain/extension_repository.dart';
+import 'package:gmanga/features/extensions/data/isar_extension_repository.dart';
+import 'package:gmanga/core/database/isar_service.dart';
 
-part 'extension_providers.g.dart';
+// Extension repository provider
+final extensionRepositoryProvider = FutureProvider<ExtensionRepository>((ref) async {
+  final isar = await IsarService.instance.isar;
+  return IsarExtensionRepository(isar);
+});
 
-// Simple in-memory extension provider
-@riverpod
-class ExtensionList extends _$ExtensionList {
-  @override
-  Future<List<ExtensionSource>> build() async {
-    // Return a list of available extensions
-    return [
-      ExtensionSource(
-        id: 'test',
-        name: 'Test Source (JSONPlaceholder)',
-        version: '1.0.0',
-        lang: 'en',
-        isEnabled: true,
-      ),
-      ExtensionSource(
-        id: 'nekopost',
-        name: 'NekoPost',
-        version: '1.0.0',
-        lang: 'th',
-        isEnabled: true,
-      ),
-      ExtensionSource(
-        id: 'mangadx',
-        name: 'MangaDx',
-        version: '1.0.0',
-        lang: 'en',
-        isEnabled: false,
-      ),
-      ExtensionSource(
-        id: 'comick',
-        name: 'Comick',
-        version: '1.0.0',
-        lang: 'en',
-        isEnabled: false,
-      ),
-    ];
-  }
+// Simple extension list provider
+final extensionListProvider = StateNotifierProvider<ExtensionListNotifier, AsyncValue<List<ExtensionSource>>>((ref) {
+  return ExtensionListNotifier(ref);
+});
 
-  Future<void> toggle(String extensionId) async {
-    final current = await future;
-    final updated = current.map((ext) {
-      if (ext.id == extensionId) {
-        return ExtensionSource(
-          id: ext.id,
-          name: ext.name,
-          version: ext.version,
-          lang: ext.lang,
-          isEnabled: !ext.isEnabled,
-        );
-      }
-      return ext;
-    }).toList();
-    
-    // Update the state
-    state = AsyncData(updated);
+class ExtensionListNotifier extends StateNotifier<AsyncValue<List<ExtensionSource>>> {
+  final Ref _ref;
+  
+  ExtensionListNotifier(this._ref) : super(const AsyncValue.loading()) {
+    _loadExtensions();
   }
   
-  Future<void> importFromUrl(String url) async {
-    // For now, just show a placeholder functionality
-    // In a real implementation, this would fetch extension metadata from the URL
-    print('Importing extension from URL: $url');
-    // This is a stub implementation for now
+  Future<void> _loadExtensions() async {
+    state = const AsyncValue.loading();
+    try {
+      final repositoryAsync = await _ref.read(extensionRepositoryProvider.future);
+      final extensions = await repositoryAsync.getInstalledExtensions();
+      state = AsyncValue.data(extensions);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
   }
-
+  
+  Future<void> toggle(String extensionId) async {
+    try {
+      final repository = await _ref.read(extensionRepositoryProvider.future);
+      await repository.toggleExtension(extensionId);
+      _loadExtensions(); // Reload to reflect changes
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+  
   Future<ExtensionSource?> loadExtensionFromFile() async {
     try {
       // Use file picker to select a JavaScript file
-      final result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['js'],
         allowMultiple: false,
         withData: true,
       );
-
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        final content = String.fromCharCodes(file.bytes!);
+      
+      if (result != null && result.files.single.bytes != null) {
+        final fileBytes = result.files.single.bytes!;
+        final fileName = result.files.single.name;
+        final fileContent = String.fromCharCodes(fileBytes);
         
-        // Parse extension metadata from JavaScript comments
-        final metadata = _parseExtensionMetadata(content);
-        if (metadata == null) {
-          throw Exception('Invalid extension file: Missing metadata');
-        }
-
-        // Validate extension content
-        if (!_validateExtensionContent(content)) {
-          throw Exception('Invalid extension file: Missing required functions');
-        }
-
-        // Create ExtensionSource object
-        final extension = ExtensionSource(
-          id: metadata['id']!,
-          name: metadata['name']!,
-          version: metadata['version']!,
-          lang: metadata['lang'] ?? 'en',
-          isEnabled: true,
-        );
-
-        // Add to current list
-        final current = await future;
-        final updated = [...current, extension];
-        state = AsyncData(updated);
-
-        return extension;
-      }
-    } catch (e) {
-      print('Error loading extension from file: $e');
-    }
-    return null;
-  }
-
-  /// Parse extension metadata from JavaScript comments
-  Map<String, String>? _parseExtensionMetadata(String content) {
-    final lines = content.split('\n');
-    final metadata = <String, String>{};
-    
-    bool inMetadataBlock = false;
-    
-    for (final line in lines) {
-      final trimmedLine = line.trim();
-      
-      // Look for metadata block start
-      if (trimmedLine.startsWith('/**') || trimmedLine.startsWith('/*')) {
-        inMetadataBlock = true;
-        continue;
-      }
-      
-      // Look for metadata block end
-      if (trimmedLine.endsWith('*/')) {
-        inMetadataBlock = false;
-        break;
-      }
-      
-      // Parse metadata within block
-      if (inMetadataBlock && trimmedLine.startsWith('*')) {
-        final metadataLine = trimmedLine.substring(1).trim();
+        // Parse the JavaScript extension file to extract metadata
+        final extensionSource = _parseExtensionFromScript(fileContent, fileName);
         
-        // Parse @key value format
-        if (metadataLine.startsWith('@')) {
-          final parts = metadataLine.split(' ');
-          if (parts.length >= 2) {
-            final key = parts[0].substring(1); // Remove @
-            final value = parts.sublist(1).join(' ');
-            metadata[key] = value;
-          }
+        if (extensionSource != null) {
+          // Save the extension using the repository
+          final repository = await _ref.read(extensionRepositoryProvider.future);
+          
+          // Create a temporary file path for the extension
+          final extensionId = extensionSource.id;
+          final extensionPath = 'extensions/$extensionId.js';
+          
+          // Save the extension content (this would typically save to assets or app directory)
+          await _saveExtensionFile(extensionPath, fileContent);
+          
+          // Add to repository
+          await repository.importFromUrl(extensionPath);
+          
+          // Reload extensions list
+          _loadExtensions();
+          
+          return extensionSource;
         }
       }
-    }
-
-    // Validate required metadata
-    if (!metadata.containsKey('id') || 
-        !metadata.containsKey('name') || 
-        !metadata.containsKey('version')) {
+      
+      return null;
+    } catch (error) {
+      print('Error loading extension from file: $error');
       return null;
     }
-
-    return metadata;
   }
-
-  /// Validate that extension contains required functions
-  bool _validateExtensionContent(String content) {
-    final requiredFunctions = [
-      'getPopularUrl',
-      'parsePopular',
-    ];
-
-    for (final func in requiredFunctions) {
-      if (!content.contains(func)) {
-        return false;
-      }
+  
+  // Helper method to parse extension metadata from JavaScript content
+  ExtensionSource? _parseExtensionFromScript(String content, String fileName) {
+    try {
+      // Look for extension metadata in comments or specific patterns
+      // This is a simplified parser - in a real app you'd use a proper JS parser
+      
+      final idMatch = RegExp(r'id:\s*["\x27]([^"\x27]+)["\x27]').firstMatch(content);
+      final nameMatch = RegExp(r'name:\s*["\x27]([^"\x27]+)["\x27]').firstMatch(content);
+      final versionMatch = RegExp(r'version:\s*["\x27]([^"\x27]+)["\x27]').firstMatch(content);
+      final langMatch = RegExp(r'lang:\s*["\x27]([^"\x27]+)["\x27]').firstMatch(content);
+      
+      final id = idMatch?.group(1) ?? fileName.replaceAll('.js', '');
+      final name = nameMatch?.group(1) ?? fileName.replaceAll('.js', '');
+      final version = versionMatch?.group(1) ?? '1.0.0';
+      final lang = langMatch?.group(1) ?? 'en';
+      
+      return ExtensionSource(
+        id: id,
+        name: name,
+        version: version,
+        lang: lang,
+        isEnabled: false,
+      );
+    } catch (e) {
+      print('Error parsing extension script: $e');
+      return null;
     }
-
-    return true;
+  }
+  
+  // Helper method to save extension file
+  Future<void> _saveExtensionFile(String path, String content) async {
+    try {
+      // In a real implementation, you'd save to the app's documents directory
+      // or assets folder. For now, we'll just print the action.
+      print('Saving extension to path: $path');
+      print('Content length: ${content.length} characters');
+      
+      // TODO: Implement actual file saving to app directory
+      // final directory = await getApplicationDocumentsDirectory();
+      // final file = File('${directory.path}/$path');
+      // await file.create(recursive: true);
+      // await file.writeAsString(content);
+    } catch (e) {
+      print('Error saving extension file: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> importFromUrl(String url) async {
+    try {
+      final repository = await _ref.read(extensionRepositoryProvider.future);
+      await repository.importFromUrl(url);
+      _loadExtensions(); // Reload to reflect changes
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
   }
 }

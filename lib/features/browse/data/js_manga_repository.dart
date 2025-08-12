@@ -39,10 +39,11 @@ class JsMangaRepository implements MangaRepository {
   }
   
   String _getSourceClassName(String assetPath) {
-    if (assetPath.contains('test_source')) return 'TestSource';
     if (assetPath.contains('nekopost_source')) return 'NekoPostSource';
     if (assetPath.contains('mangadx_source')) return 'MangaDxSource';
     if (assetPath.contains('comick_source')) return 'ComickSource';
+    if (assetPath.contains('mikudoujin_source')) return 'MikuDoujinSource';
+    if (assetPath.contains('niceoppai_source')) return 'NiceOppaiSource';
     return 'UnknownSource';
   }
 
