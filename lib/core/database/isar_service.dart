@@ -8,6 +8,7 @@ import '../../features/extensions/data/isar_extension_source.dart';
 class IsarService {
   static IsarService? _instance;
   static Isar? _isar;
+  static bool _isOpening = false;
 
   IsarService._();
 
@@ -19,17 +20,39 @@ class IsarService {
   Future<Isar> get isar async {
     if (_isar != null) return _isar!;
     
-    final dir = await getApplicationDocumentsDirectory();
-    _isar = await Isar.open(
-      [
-        ReadingHistorySchema,
-        UserSettingsSchema,
-        IsarExtensionSourceSchema,
-        CachedMangaSchema,
-      ],
-      directory: dir.path,
-      name: 'gmanga_db',
-    );
+    // Prevent multiple simultaneous opens
+    if (_isOpening) {
+      // Wait for the ongoing open operation to complete
+      while (_isOpening && _isar == null) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+      if (_isar != null) return _isar!;
+    }
+    
+    _isOpening = true;
+    
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      _isar = await Isar.open(
+        [
+          ReadingHistorySchema,
+          UserSettingsSchema,
+          IsarExtensionSourceSchema,
+          CachedMangaSchema,
+        ],
+        directory: dir.path,
+        name: 'gmanga_db',
+      );
+    } catch (e) {
+      print('Error opening Isar database: $e');
+      // If the error is about instance already opened, try to get existing instance
+      if (e.toString().contains('already been opened')) {
+        _isar = Isar.getInstance('gmanga_db');
+      }
+      if (_isar == null) rethrow;
+    } finally {
+      _isOpening = false;
+    }
     
     return _isar!;
   }
